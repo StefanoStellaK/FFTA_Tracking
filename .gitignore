@@ -1,0 +1,15 @@
+# Ambiente virtuale
+venv/
+
+# File temporanei di sistema
+*.pyc
+__pycache__/
+
+# File di log
+*.log
+
+# File Excel di backup
+*.xlsx~
+
+# Configurazioni IDE
+.vscode/
