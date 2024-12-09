@@ -19,17 +19,51 @@ def write_excel(entity, data):
     df = pd.DataFrame(data)
     df.to_excel(FILES[entity], index=False)
 
-# Endpoint: Leggi i dati (Read)
+# Endpoint: Leggi i dati (Read) con filtro avanzato per Job
 @app.route('/api/<entity>', methods=['GET'])
 def get_entity(entity):
     if entity not in FILES:
         return jsonify({"error": "Entity not found"}), 404
 
     try:
-        data = read_excel(entity).to_dict(orient='records')
+        # Leggi il file Excel
+        df = read_excel(entity)
+
+        # Converti i nomi delle colonne in lowercase
+        df.columns = df.columns.str.lower()
+
+        data = df.to_dict(orient='records')
+
+        # Filtra i Job per razza o abilità
+        if entity == "job":
+            razza = request.args.get('razza')
+            abilita = request.args.get('abilita')
+            
+            # Confronto case-insensitive
+            if razza:
+                razza = razza.lower()
+                df = df[
+                    (df['razza1'].str.lower() == razza) |
+                    (df['razza2'].str.lower() == razza) |
+                    (df['razza3'].str.lower() == razza)
+                ]
+            
+            if abilita:
+                # Rimuovi spazi dal parametro e trasformalo in lowercase
+                abilita = abilita.replace(" ", "").lower()
+
+                # Rimuovi spazi dai valori nella colonna 'nome' e confronta
+                df = df[df['nome'].str.replace(" ", "").str.lower().str.contains(abilita)]
+
+
+            # Converti i dati filtrati in dizionario
+            data = df.to_dict(orient='records')
+
         return jsonify(data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
 
 # Endpoint: Aggiungi un nuovo record (Create)
 @app.route('/api/<entity>', methods=['POST'])
