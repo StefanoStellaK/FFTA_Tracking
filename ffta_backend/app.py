@@ -32,22 +32,15 @@ def get_entity(entity):
         # Converti i nomi delle colonne in lowercase
         df.columns = df.columns.str.lower()
 
-        data = df.to_dict(orient='records')
-
-        # Filtra i Job per razza o abilità
+        # Filtra i JOB per razza o abilità
         if entity == "job":
             razza = request.args.get('razza')
             abilita = request.args.get('abilita')
             
             # Confronto case-insensitive
             if razza:
-                razza = razza.lower()
-                df = df[
-                    (df['razza1'].str.lower() == razza) |
-                    (df['razza2'].str.lower() == razza) |
-                    (df['razza3'].str.lower() == razza)
-                ]
-            
+                df = filtroPerColonneMultiple(df, ['razza1', 'razza2', 'razza3'], razza)
+
             if abilita:
                 # Rimuovi spazi dal parametro e trasformalo in lowercase
                 abilita = abilita.replace(" ", "").lower()
@@ -55,15 +48,34 @@ def get_entity(entity):
                 # Rimuovi spazi dai valori nella colonna 'nome' e confronta
                 df = df[df['nome'].str.replace(" ", "").str.lower().str.contains(abilita)]
 
+        # Filtra le ABILITA per razza, job o nome
+        if entity == "abilita":
+            razza = request.args.get('razza')
+            job = request.args.get('job')
+            abilita = request.args.get('abilita')
+            
+            # filtro delle abilità per razza
+            if razza:
+                df = filtroPerColonneMultiple(df, ['razza'], razza)
 
-            # Converti i dati filtrati in dizionario
-            data = df.to_dict(orient='records')
+            if job:
+                # Rimuovi spazi dal parametro e trasformalo in lowercase
+                job = job.replace(" ", "").lower()
+                # Rimuovi spazi dai valori nella colonna 'nome' e confronta
+                df = df[df['job'].str.replace(" ", "").str.lower().str.contains(job)]
+
+            if abilita:
+                # Rimuovi spazi dal parametro e trasformalo in lowercase
+                abilita = abilita.replace(" ", "").lower()
+                # Rimuovi spazi dai valori nella colonna 'nome' e confronta
+                df = df[df['nome'].str.replace(" ", "").str.lower().str.contains(abilita)]
+
+        # Converti i dati filtrati in dizionario
+        data = df.to_dict(orient='records')
 
         return jsonify(data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
 
 # Endpoint: Aggiungi un nuovo record (Create)
 @app.route('/api/<entity>', methods=['POST'])
@@ -128,6 +140,17 @@ def delete_entity(entity, record_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+#funzione per filtrare un dizionario per uno o + colonne
+def filtroPerColonneMultiple(df, colonne, valore):
+    if valore:
+        valore = valore.lower()
+        # Applica il filtro su tutte le colonne specificate
+        conditions = [df[col].str.lower() == valore for col in colonne]
+        return df[pd.concat(conditions, axis=1).any(axis=1)]
+    return df
+
+
 # Esegui l'app
 if __name__ == "__main__":
     app.run(debug=True)
+
